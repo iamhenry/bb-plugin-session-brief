@@ -3,6 +3,7 @@ import * as Popover from "@radix-ui/react-popover";
 import {
   experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
+  useBbNavigate,
 } from "@get-bb/plugin-sdk/app";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -24,6 +25,7 @@ export function SessionBriefHost({
   const brief = useSessionBrief(threadId);
   const { threads } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
+  const navigate = useBbNavigate();
   const [open, setOpen] = useState(true);
   const portalScope = usePortalScopeProps();
 
@@ -72,6 +74,15 @@ export function SessionBriefHost({
             onClose={() => setOpen(false)}
             onOpenChild={(id) => {
               actions.open(id);
+            }}
+            onOpenDirtyFile={(file) => {
+              const environmentId = brief.project.environmentId;
+              if (!environmentId || !brief.project.git) return;
+              navigate.openThreadPanel({
+                actionId: "dirty-file",
+                title: file.path.split("/").pop() ?? file.path,
+                params: { path: file.path, environmentId },
+              });
             }}
           />
         </Popover.Content>

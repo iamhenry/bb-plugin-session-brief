@@ -124,7 +124,58 @@ function todosFromTimeline(timeline: unknown): TodoItem[] {
 }
 
 
-function projectFrom(thread: unknown, project: unknown): ProjectBrief {
+const TRACKED_STATUS = new Set(["A", "C", "D", "M", "R", "U"]);
+const MAX_DIRTY_FILES = 25;
+
+function environmentIdFrom(thread: unknown): string | null {
+  if (!isRecord(thread)) return null;
+  if (typeof thread.environmentId === "string") return thread.environmentId;
+  if (isRecord(thread.environment) && typeof thread.environment.id === "string") {
+    return thread.environment.id;
+  }
+  return null;
+}
+
+function dirtyFromStatus(status: unknown): {
+  insertions: number;
+  deletions: number;
+  dirtyFiles: {
+    path: string;
+    status: string;
+    insertions: number | null;
+    deletions: number | null;
+  }[];
+} {
+  if (!isRecord(status) || status.outcome !== "available" || !isRecord(status.workspace)) {
+    return { insertions: 0, deletions: 0, dirtyFiles: [] };
+  }
+  const tree = status.workspace.workingTree;
+  if (!isRecord(tree) || !Array.isArray(tree.files)) {
+    return { insertions: 0, deletions: 0, dirtyFiles: [] };
+  }
+  const dirtyFiles = tree.files.flatMap((file) => {
+    if (!isRecord(file) || typeof file.path !== "string") return [];
+    const letter = typeof file.status === "string" ? file.status : "";
+    if (!TRACKED_STATUS.has(letter)) return [];
+    return [{
+      path: file.path,
+      status: letter,
+      insertions: typeof file.insertions === "number" ? Math.max(0, file.insertions) : null,
+      deletions: typeof file.deletions === "number" ? Math.max(0, file.deletions) : null,
+    }];
+  }).slice(0, MAX_DIRTY_FILES);
+  return {
+    insertions: typeof tree.insertions === "number" ? Math.max(0, tree.insertions) : 0,
+    deletions: typeof tree.deletions === "number" ? Math.max(0, tree.deletions) : 0,
+    dirtyFiles,
+  };
+}
+
+function projectFrom(
+  thread: unknown,
+  project: unknown,
+  gitStatus: unknown,
+): ProjectBrief {
   const env = isRecord(thread) && isRecord(thread.environment)
     ? thread.environment
     : null;
@@ -137,7 +188,16 @@ function projectFrom(thread: unknown, project: unknown): ProjectBrief {
     isRecord(project) && typeof project.name === "string" && project.name.length > 0
       ? project.name
       : "Untitled project";
-  return { name, branch, git };
+  const dirty = git ? dirtyFromStatus(gitStatus) : { insertions: 0, deletions: 0, dirtyFiles: [] };
+  return {
+    name,
+    branch,
+    git,
+    environmentId: environmentIdFrom(thread),
+    insertions: dirty.insertions,
+    deletions: dirty.deletions,
+    dirtyFiles: dirty.dirtyFiles,
+  };
 }
 
 function hostIdFromThread(thread: unknown): string | undefined {
@@ -250,12 +310,16 @@ export async function composeBrief(
     isRecord(thread) && typeof thread.projectId === "string"
       ? thread.projectId
       : null;
-  const [listed, timeline, options, project] = await Promise.all([
+  const environmentId = environmentIdFrom(thread);
+  const [listed, timeline, options, project, gitStatus] = await Promise.all([
     bb.sdk.threads.list({ parentThreadId: threadId, limit: 50 }),
     bb.sdk.threads.timeline({ threadId, summaryOnly: "true" }),
     bb.sdk.threads.defaultExecutionOptions({ threadId }).catch(() => null),
     projectId
       ? bb.sdk.projects.get({ projectId }).catch(() => null)
+      : Promise.resolve(null),
+    environmentId
+      ? bb.sdk.environments.status({ environmentId }).catch(() => null)
       : Promise.resolve(null),
   ]);
 
@@ -278,7 +342,7 @@ export async function composeBrief(
     providerId,
     model,
     context,
-    project: projectFrom(thread, project),
+    project: projectFrom(thread, project, gitStatus),
     providers: [usage],
     children: listedThreads(listed).map(mapChild),
     todos: todosFromTimeline(timeline),

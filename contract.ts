@@ -58,10 +58,21 @@ export const todoItemSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]),
 });
 
+export const dirtyFileSchema = z.object({
+  path: z.string(),
+  status: z.string(),
+  insertions: z.number().int().nonnegative().nullable(),
+  deletions: z.number().int().nonnegative().nullable(),
+});
+
 export const projectBriefSchema = z.object({
   name: z.string(),
   branch: z.string().nullable(),
   git: z.boolean(),
+  environmentId: z.string().nullable(),
+  insertions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  dirtyFiles: z.array(dirtyFileSchema),
 });
 
 export const sessionBriefSchema = z.object({
@@ -80,6 +91,7 @@ export type UsageWindow = z.infer<typeof usageWindowSchema>;
 export type ProviderUsage = z.infer<typeof providerUsageSchema>;
 export type ChildThread = z.infer<typeof childThreadSchema>;
 export type TodoItem = z.infer<typeof todoItemSchema>;
+export type DirtyFile = z.infer<typeof dirtyFileSchema>;
 export type ProjectBrief = z.infer<typeof projectBriefSchema>;
 export type SessionBrief = z.infer<typeof sessionBriefSchema>;
 export type ChildStatus = ChildThread["status"];

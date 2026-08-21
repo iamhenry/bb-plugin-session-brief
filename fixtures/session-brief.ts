@@ -12,7 +12,7 @@ export const SAMPLE_BRIEF: SessionBrief = {
     modelContextWindow: 200_000,
     estimated: false,
   },
-  project: { name: "macvm", branch: "main", git: true },
+  project: { name: "macvm", branch: "main", git: true, environmentId: null, insertions: 0, deletions: 0, dirtyFiles: [] },
   providers: [
     {
       id: "codex",

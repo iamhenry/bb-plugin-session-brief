@@ -1,4 +1,4 @@
-import type { SessionBrief } from "../../contract";
+import type { DirtyFile, SessionBrief } from "../../contract";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ChildrenSection } from "./sections/ChildrenSection";
@@ -11,10 +11,12 @@ export function SessionBriefCard({
   brief,
   onClose,
   onOpenChild,
+  onOpenDirtyFile,
 }: {
   brief: SessionBrief;
   onClose: () => void;
   onOpenChild?: (threadId: string) => void;
+  onOpenDirtyFile?: (file: DirtyFile) => void;
 }) {
   return (
     <aside
@@ -38,7 +40,10 @@ export function SessionBriefCard({
       </header>
       <div className="min-h-0 overflow-y-auto">
         <ContextSection context={brief.context} />
-        <ProjectSection project={brief.project} />
+        <ProjectSection
+          project={brief.project}
+          onOpenDirtyFile={onOpenDirtyFile}
+        />
         <UsageSection providers={brief.providers} />
         <ChildrenSection items={brief.children} onOpenChild={onOpenChild} />
         <TodosSection todos={brief.todos} />

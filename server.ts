@@ -9,6 +9,28 @@ export const rpcContract = defineRpcContract({
     input: z.object({ threadId: z.string() }),
     output: sessionBriefSchema,
   },
+  getDirtyFile: {
+    input: z.object({
+      environmentId: z.string(),
+      path: z.string().min(1),
+    }),
+    output: z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("diff"),
+        path: z.string(),
+        patch: z.string(),
+      }),
+      z.object({
+        kind: z.literal("file"),
+        path: z.string(),
+        content: z.string(),
+      }),
+      z.object({
+        kind: z.literal("missing"),
+        path: z.string(),
+      }),
+    ]),
+  },
 });
 
 export default async function plugin(bb: BbPluginApi) {
@@ -36,6 +58,32 @@ export default async function plugin(bb: BbPluginApi) {
         );
         return { ...SAMPLE_BRIEF, threadId };
       }
+    },
+    getDirtyFile: async ({ environmentId, path }) => {
+      try {
+        const result = await bb.sdk.environments.diffPatch({
+          environmentId,
+          paths: [path],
+          target: { type: "uncommitted" },
+        });
+        if (
+          result &&
+          typeof result === "object" &&
+          "outcome" in result &&
+          result.outcome === "available" &&
+          Array.isArray(result.patches) &&
+          typeof result.patches[0]?.patch === "string"
+        ) {
+          return {
+            kind: "diff" as const,
+            path,
+            patch: result.patches[0].patch,
+          };
+        }
+      } catch {
+        // Fall through to a missing result rather than inventing a patch.
+      }
+      return { kind: "missing" as const, path };
     },
   });
 
