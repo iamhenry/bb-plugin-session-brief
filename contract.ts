@@ -1,0 +1,88 @@
+import { z } from "zod";
+
+/** 1–6 maps to host `bg-chart-*` tokens. Never store hex in the brief. */
+export const childColorSlotSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+  z.literal(6),
+]);
+
+export const contextUsageSchema = z.object({
+  usedTokens: z.number().nonnegative(),
+  modelContextWindow: z.number().nonnegative(),
+  estimated: z.boolean(),
+});
+
+export const usageWindowSchema = z.object({
+  label: z.string(),
+  usedPercent: z.number().min(0).max(100),
+  resetsAt: z.string().nullable(),
+  cost: z
+    .object({
+      usedUsdCents: z.number().int().nonnegative(),
+      limitUsdCents: z.number().int().nonnegative(),
+    })
+    .optional(),
+});
+
+export const providerUsageSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.enum([
+    "ok",
+    "not_installed",
+    "unauthenticated",
+    "expired",
+    "error",
+  ]),
+  planLabel: z.string().nullable(),
+  message: z.string().nullable(),
+  windows: z.array(usageWindowSchema),
+});
+
+export const childThreadSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: z.enum(["running", "idle", "done", "error", "needs_input"]),
+  providerId: z.string(),
+  colorSlot: childColorSlotSchema,
+  startedAtMs: z.number().nullable(),
+});
+
+export const todoItemSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  status: z.enum(["pending", "in_progress", "completed"]),
+});
+
+export const projectBriefSchema = z.object({
+  name: z.string(),
+  branch: z.string().nullable(),
+  git: z.boolean(),
+});
+
+export const sessionBriefSchema = z.object({
+  threadId: z.string(),
+  providerId: z.string(),
+  model: z.string(),
+  context: contextUsageSchema,
+  project: projectBriefSchema,
+  providers: z.array(providerUsageSchema),
+  children: z.array(childThreadSchema),
+  todos: z.array(todoItemSchema),
+});
+
+export type ContextUsage = z.infer<typeof contextUsageSchema>;
+export type UsageWindow = z.infer<typeof usageWindowSchema>;
+export type ProviderUsage = z.infer<typeof providerUsageSchema>;
+export type ChildThread = z.infer<typeof childThreadSchema>;
+export type TodoItem = z.infer<typeof todoItemSchema>;
+export type ProjectBrief = z.infer<typeof projectBriefSchema>;
+export type SessionBrief = z.infer<typeof sessionBriefSchema>;
+export type ChildStatus = ChildThread["status"];
+export type TodoStatus = TodoItem["status"];
+export type ProviderUsageStatus = ProviderUsage["status"];
+export type ChildColorSlot = z.infer<typeof childColorSlotSchema>;
