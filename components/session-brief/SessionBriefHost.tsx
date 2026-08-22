@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   experimental_useSidebarThreadActions,
@@ -17,6 +17,7 @@ import { SessionBriefCard } from "./SessionBriefCard";
 
 export function SessionBriefHost({
   threadId,
+  isCompactViewport,
 }: {
   threadId: string;
   projectId: string | null;
@@ -26,8 +27,12 @@ export function SessionBriefHost({
   const { threads } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
   const navigate = useBbNavigate();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!isCompactViewport);
   const portalScope = usePortalScopeProps();
+
+  useEffect(() => {
+    if (isCompactViewport) setOpen(false);
+  }, [isCompactViewport]);
 
   const liveChildren = useMemo(
     () => mapSidebarSubthreads(threads, threadId),
@@ -55,38 +60,31 @@ export function SessionBriefHost({
           <Icon name="SlidersHorizontal" className="size-4" aria-hidden />
         </Button>
       </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="end"
-          side="bottom"
-          sideOffset={40}
-          collisionPadding={12}
-          {...portalScope}
-          className="z-50 outline-none"
-          onOpenAutoFocus={(event) => event.preventDefault()}
-          onCloseAutoFocus={(event) => event.preventDefault()}
-          onPointerDownOutside={(event) => event.preventDefault()}
-          onFocusOutside={(event) => event.preventDefault()}
-          onInteractOutside={(event) => event.preventDefault()}
-        >
-          <SessionBriefCard
-            brief={cardBrief}
-            onClose={() => setOpen(false)}
-            onOpenChild={(id) => {
-              actions.open(id);
-            }}
-            onOpenDirtyFile={(file) => {
-              const environmentId = brief.project.environmentId;
-              if (!environmentId || !brief.project.git) return;
-              navigate.openThreadPanel({
-                actionId: "dirty-file",
-                title: file.path.split("/").pop() ?? file.path,
-                params: { path: file.path, environmentId },
-              });
-            }}
-          />
-        </Popover.Content>
-      </Popover.Portal>
+      {open ? (
+        <Popover.Portal>
+          <div
+            {...portalScope}
+            className="fixed top-14 right-3 z-50 outline-none"
+          >
+            <SessionBriefCard
+              brief={cardBrief}
+              onClose={() => setOpen(false)}
+              onOpenChild={(id) => {
+                actions.open(id);
+              }}
+              onOpenDirtyFile={(file) => {
+                const environmentId = brief.project.environmentId;
+                if (!environmentId || !brief.project.git) return;
+                navigate.openThreadPanel({
+                  actionId: "dirty-file",
+                  title: file.path.split("/").pop() ?? file.path,
+                  params: { path: file.path, environmentId },
+                });
+              }}
+            />
+          </div>
+        </Popover.Portal>
+      ) : null}
     </Popover.Root>
   );
 }

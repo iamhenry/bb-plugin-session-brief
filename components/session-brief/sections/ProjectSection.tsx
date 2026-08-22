@@ -63,7 +63,7 @@ export function ProjectSection({
         </div>
       ) : null}
       {dirty.length > 0 ? (
-        <div className="max-h-36 overflow-y-auto">
+        <div className="max-h-40 overflow-y-auto">
           {dirty.map((file) => (
             <DirtyRow key={file.path} file={file} onOpen={onOpenDirtyFile} />
           ))}

@@ -124,8 +124,7 @@ function todosFromTimeline(timeline: unknown): TodoItem[] {
 }
 
 
-const TRACKED_STATUS = new Set(["A", "C", "D", "M", "R", "U"]);
-const MAX_DIRTY_FILES = 25;
+const DIRTY_STATUS = new Set(["A", "C", "D", "M", "R", "U", "?", "??"]);
 
 function environmentIdFrom(thread: unknown): string | null {
   if (!isRecord(thread)) return null;
@@ -156,14 +155,14 @@ function dirtyFromStatus(status: unknown): {
   const dirtyFiles = tree.files.flatMap((file) => {
     if (!isRecord(file) || typeof file.path !== "string") return [];
     const letter = typeof file.status === "string" ? file.status : "";
-    if (!TRACKED_STATUS.has(letter)) return [];
+    if (!DIRTY_STATUS.has(letter)) return [];
     return [{
       path: file.path,
-      status: letter,
+      status: letter === "??" ? "?" : letter,
       insertions: typeof file.insertions === "number" ? Math.max(0, file.insertions) : null,
       deletions: typeof file.deletions === "number" ? Math.max(0, file.deletions) : null,
     }];
-  }).slice(0, MAX_DIRTY_FILES);
+  });
   return {
     insertions: typeof tree.insertions === "number" ? Math.max(0, tree.insertions) : 0,
     deletions: typeof tree.deletions === "number" ? Math.max(0, tree.deletions) : 0,
