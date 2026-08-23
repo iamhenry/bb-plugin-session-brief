@@ -23,11 +23,11 @@ export function SessionBriefHost({
   projectId: string | null;
   isCompactViewport: boolean;
 }) {
-  const brief = useSessionBrief(threadId);
+  const [open, setOpen] = useState(!isCompactViewport);
+  const brief = useSessionBrief(threadId, { live: open });
   const { threads } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
   const navigate = useBbNavigate();
-  const [open, setOpen] = useState(!isCompactViewport);
   const portalScope = usePortalScopeProps();
 
   useEffect(() => {

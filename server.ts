@@ -1,13 +1,21 @@
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { sessionBriefSchema } from "./contract";
+import { projectBriefSchema, sessionBriefSchema } from "./contract";
 import { SAMPLE_BRIEF } from "./fixtures/session-brief";
-import { composeBrief } from "./server/composeBrief";
+import { composeBrief, composeProject } from "./server/composeBrief";
+import {
+  isProjectEnvironmentChange,
+  isProjectThreadChange,
+} from "./server/projectSignals";
 
 export const rpcContract = defineRpcContract({
   getBrief: {
     input: z.object({ threadId: z.string() }),
     output: sessionBriefSchema,
+  },
+  getProject: {
+    input: z.object({ threadId: z.string() }),
+    output: projectBriefSchema,
   },
   getDirtyFile: {
     input: z.object({
@@ -36,16 +44,44 @@ export const rpcContract = defineRpcContract({
 export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
 
-  const publish = (threadId: string) => {
+  const publishBrief = (threadId: string) => {
     bb.realtime.publish("brief-changed", { threadId });
   };
+  const publishProject = (payload: {
+    threadId?: string;
+    environmentId?: string;
+  }) => {
+    bb.realtime.publish("project-changed", payload);
+  };
 
-  bb.events.on("thread.active", ({ thread }) => publish(thread.id));
-  bb.events.on("thread.idle", ({ thread }) => publish(thread.id));
-  bb.events.on("thread.failed", ({ thread }) => publish(thread.id));
+  bb.events.on("thread.active", ({ thread }) => publishBrief(thread.id));
+  bb.events.on("thread.idle", ({ thread }) => publishBrief(thread.id));
+  bb.events.on("thread.failed", ({ thread }) => publishBrief(thread.id));
   bb.events.on("thread.created", ({ thread }) => {
-    publish(thread.id);
-    if (thread.parentThreadId) publish(thread.parentThreadId);
+    publishBrief(thread.id);
+    if (thread.parentThreadId) publishBrief(thread.parentThreadId);
+  });
+
+  const unsubscribeEnvironment = bb.sdk.subscribe({
+    event: "environment:changed",
+    callback: (event) => {
+      if (!isProjectEnvironmentChange(event.changes)) return;
+      publishProject({ environmentId: event.id });
+    },
+  });
+  const unsubscribeThread = bb.sdk.subscribe({
+    event: "thread:changed",
+    callback: (event) => {
+      if (
+        !isProjectThreadChange({
+          changes: event.changes,
+          eventTypes: event.metadata?.eventTypes,
+        })
+      ) {
+        return;
+      }
+      if (event.id) publishProject({ threadId: event.id });
+    },
   });
 
   bb.rpc.register(rpcContract, {
@@ -58,6 +94,9 @@ export default async function plugin(bb: BbPluginApi) {
         );
         return { ...SAMPLE_BRIEF, threadId };
       }
+    },
+    getProject: async ({ threadId }) => {
+      return composeProject(bb, threadId);
     },
     getDirtyFile: async ({ environmentId, path }) => {
       try {
@@ -88,6 +127,8 @@ export default async function plugin(bb: BbPluginApi) {
   });
 
   bb.onDispose(() => {
+    unsubscribeEnvironment();
+    unsubscribeThread();
     bb.log.info("disposed");
   });
 }

@@ -37,7 +37,7 @@ Open a thread and use the sliders control in the thread header.
 | Section | Source |
 | --- | --- |
 | Context | BB `contextWindowUsage` for this thread |
-| Project | BB project name + git branch when the environment is a repo |
+| Project | BB project name + git branch and dirty files (live via environment work-status) |
 | Usage | Remaining % for the **current model vendor**, not the agent harness |
 | Subthreads | Child threads; click opens them. Finished threads show Done, errors show Error |
 | Todos | This thread’s `pendingTodos` (read-only) |

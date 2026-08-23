@@ -170,6 +170,42 @@ function dirtyFromStatus(status: unknown): {
   };
 }
 
+async function loadThread(bb: BbPluginApi, threadId: string): Promise<unknown> {
+  return bb.sdk.threads
+    .get({
+      threadId,
+      include: "environment,host",
+    })
+    .catch(() => bb.sdk.threads.get({ threadId }));
+}
+
+async function loadProjectBrief(
+  bb: BbPluginApi,
+  thread: unknown,
+): Promise<ProjectBrief> {
+  const projectId =
+    isRecord(thread) && typeof thread.projectId === "string"
+      ? thread.projectId
+      : null;
+  const environmentId = environmentIdFrom(thread);
+  const [project, gitStatus] = await Promise.all([
+    projectId
+      ? bb.sdk.projects.get({ projectId }).catch(() => null)
+      : Promise.resolve(null),
+    environmentId
+      ? bb.sdk.environments.status({ environmentId }).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  return projectFrom(thread, project, gitStatus);
+}
+
+export async function composeProject(
+  bb: BbPluginApi,
+  threadId: string,
+): Promise<ProjectBrief> {
+  return loadProjectBrief(bb, await loadThread(bb, threadId));
+}
+
 function projectFrom(
   thread: unknown,
   project: unknown,
@@ -299,32 +335,19 @@ export async function composeBrief(
   bb: BbPluginApi,
   threadId: string,
 ): Promise<SessionBrief> {
-  const thread = await bb.sdk.threads
-    .get({
-      threadId,
-      include: "environment,host",
-    })
-    .catch(() => bb.sdk.threads.get({ threadId }));
-  const projectId =
-    isRecord(thread) && typeof thread.projectId === "string"
-      ? thread.projectId
-      : null;
-  const environmentId = environmentIdFrom(thread);
-  const [listed, timeline, options, project, gitStatus] = await Promise.all([
+  const thread = await loadThread(bb, threadId);
+  const [listed, timeline, options, project] = await Promise.all([
     bb.sdk.threads.list({ parentThreadId: threadId, limit: 50 }),
     bb.sdk.threads.timeline({ threadId, summaryOnly: "true" }),
     bb.sdk.threads.defaultExecutionOptions({ threadId }).catch(() => null),
-    projectId
-      ? bb.sdk.projects.get({ projectId }).catch(() => null)
-      : Promise.resolve(null),
-    environmentId
-      ? bb.sdk.environments.status({ environmentId }).catch(() => null)
-      : Promise.resolve(null),
+    loadProjectBrief(bb, thread),
   ]);
 
   const context = contextFromTimeline(timeline);
   const providerId =
-    typeof thread.providerId === "string" ? thread.providerId : "unknown";
+    isRecord(thread) && typeof thread.providerId === "string"
+      ? thread.providerId
+      : "unknown";
   const model =
     options && isRecord(options) && typeof options.model === "string"
       ? options.model
@@ -341,7 +364,7 @@ export async function composeBrief(
     providerId,
     model,
     context,
-    project: projectFrom(thread, project, gitStatus),
+    project,
     providers: [usage],
     children: listedThreads(listed).map(mapChild),
     todos: todosFromTimeline(timeline),
