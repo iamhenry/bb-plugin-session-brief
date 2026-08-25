@@ -76,11 +76,33 @@ export function ProjectSection({
         </div>
       ) : null}
       {dirty.length > 0 ? (
-        <div className="max-h-40 overflow-y-auto">
-          {dirty.map((file) => (
-            <DirtyRow key={file.path} file={file} onOpen={onOpenDirtyFile} />
-          ))}
-        </div>
+        <>
+          <div className="max-h-40 overflow-y-auto">
+            {dirty.map((file) => (
+              <DirtyRow key={file.path} file={file} onOpen={onOpenDirtyFile} />
+            ))}
+          </div>
+          <div
+            className="mt-1 flex items-center gap-1.5 px-1 text-[11px] leading-4 text-muted-foreground"
+            aria-label={`${dirty.length} ${dirty.length === 1 ? "file" : "files"}${
+              project.insertions > 0 || project.deletions > 0
+                ? `, +${project.insertions} −${project.deletions}`
+                : ""
+            }`}
+          >
+            <Icon name="FileDiff" className="size-3 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 tabular-nums">
+              {dirty.length} {dirty.length === 1 ? "file" : "files"}
+            </span>
+            {project.insertions > 0 || project.deletions > 0 ? (
+              <span className="shrink-0 whitespace-nowrap tabular-nums">
+                <span className="text-primary">+{project.insertions}</span>
+                <span> </span>
+                <span className="text-destructive">−{project.deletions}</span>
+              </span>
+            ) : null}
+          </div>
+        </>
       ) : null}
     </section>
   );
