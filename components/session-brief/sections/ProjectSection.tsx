@@ -2,11 +2,6 @@ import type { DirtyFile, ProjectBrief } from "../../../contract";
 import { Icon } from "@/components/ui/icon";
 import { SectionHeader } from "../SectionHeader";
 
-function fileLabel(path: string): string {
-  const parts = path.split("/");
-  return parts[parts.length - 1] || path;
-}
-
 function DirtyRow({
   file,
   onOpen,
@@ -16,6 +11,7 @@ function DirtyRow({
 }) {
   const plus = file.insertions;
   const minus = file.deletions;
+  const nameStart = file.path.lastIndexOf("/") + 1;
   return (
     <button
       type="button"
@@ -25,8 +21,13 @@ function DirtyRow({
       <span className="w-3.5 shrink-0 text-center font-medium tabular-nums text-muted-foreground">
         {file.status}
       </span>
-      <span className="min-w-0 flex-1 truncate text-foreground" title={file.path}>
-        {fileLabel(file.path)}
+      <span className="flex min-w-0 flex-1 text-foreground" title={file.path}>
+        {nameStart > 0 ? (
+          <span className="min-w-0 truncate text-muted-foreground [direction:rtl] [unicode-bidi:plaintext]">
+            {file.path.slice(0, nameStart)}
+          </span>
+        ) : null}
+        <span className="shrink-0 text-foreground">{file.path.slice(nameStart)}</span>
       </span>
       {plus !== null && minus !== null ? (
         <span className="shrink-0 whitespace-nowrap tabular-nums text-muted-foreground">
