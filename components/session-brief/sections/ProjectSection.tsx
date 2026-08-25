@@ -60,7 +60,19 @@ export function ProjectSection({
       {branchLabel ? (
         <div className="flex items-center gap-1.5 px-1 py-1 text-[11px] leading-4 text-muted-foreground">
           <Icon name="GitBranch" className="size-3.5 shrink-0" aria-hidden />
-          <span className="truncate">{branchLabel}</span>
+          <span className="min-w-0 flex-1 truncate">{branchLabel}</span>
+          {project.ahead > 0 ? (
+            <span className="inline-flex shrink-0 items-center gap-0.5 tabular-nums" title={`${project.ahead} to push`}>
+              <Icon name="ArrowUp" className="size-3" aria-hidden />
+              {project.ahead}
+            </span>
+          ) : null}
+          {project.behind > 0 ? (
+            <span className="inline-flex shrink-0 items-center gap-0.5 tabular-nums" title={`${project.behind} to pull`}>
+              <Icon name="ArrowDown" className="size-3" aria-hidden />
+              {project.behind}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {dirty.length > 0 ? (

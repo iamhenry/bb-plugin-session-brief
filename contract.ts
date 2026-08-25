@@ -68,6 +68,8 @@ export const dirtyFileSchema = z.object({
 export const projectBriefSchema = z.object({
   name: z.string(),
   branch: z.string().nullable(),
+  ahead: z.number().int().nonnegative(),
+  behind: z.number().int().nonnegative(),
   git: z.boolean(),
   environmentId: z.string().nullable(),
   insertions: z.number().int().nonnegative(),

@@ -135,6 +135,12 @@ function environmentIdFrom(thread: unknown): string | null {
   return null;
 }
 
+function branchNameFrom(thread: unknown): string | null {
+  if (!isRecord(thread) || !isRecord(thread.environment)) return null;
+  const name = thread.environment.branchName;
+  return typeof name === "string" && name.length > 0 ? name : null;
+}
+
 function dirtyFromStatus(status: unknown): {
   insertions: number;
   deletions: number;
@@ -188,12 +194,19 @@ async function loadProjectBrief(
       ? thread.projectId
       : null;
   const environmentId = environmentIdFrom(thread);
+  const branch = branchNameFrom(thread);
   const [project, gitStatus] = await Promise.all([
     projectId
       ? bb.sdk.projects.get({ projectId }).catch(() => null)
       : Promise.resolve(null),
     environmentId
-      ? bb.sdk.environments.status({ environmentId }).catch(() => null)
+      ? bb.sdk.environments
+          .status({
+            environmentId,
+            // ponytail: origin/<branch> is the upstream BB status understands
+            ...(branch ? { mergeBaseBranch: `origin/${branch}` } : {}),
+          })
+          .catch(() => null)
       : Promise.resolve(null),
   ]);
   return projectFrom(thread, project, gitStatus);
@@ -215,18 +228,24 @@ function projectFrom(
     ? thread.environment
     : null;
   const git = env?.isGitRepo === true;
-  const branch =
-    env && typeof env.branchName === "string" && env.branchName.length > 0
-      ? env.branchName
-      : null;
+  const branch = branchNameFrom(thread);
   const name =
     isRecord(project) && typeof project.name === "string" && project.name.length > 0
       ? project.name
       : "Untitled project";
   const dirty = git ? dirtyFromStatus(gitStatus) : { insertions: 0, deletions: 0, dirtyFiles: [] };
+  const mergeBase =
+    isRecord(gitStatus) &&
+    gitStatus.outcome === "available" &&
+    isRecord(gitStatus.workspace) &&
+    isRecord(gitStatus.workspace.mergeBase)
+      ? gitStatus.workspace.mergeBase
+      : null;
   return {
     name,
     branch,
+    ahead: typeof mergeBase?.aheadCount === "number" ? Math.max(0, mergeBase.aheadCount) : 0,
+    behind: typeof mergeBase?.behindCount === "number" ? Math.max(0, mergeBase.behindCount) : 0,
     git,
     environmentId: environmentIdFrom(thread),
     insertions: dirty.insertions,
