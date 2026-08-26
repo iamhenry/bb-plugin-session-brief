@@ -17,7 +17,7 @@ describe("mergeBrief", () => {
         insertions: 4,
         deletions: 1,
         dirtyFiles: [
-          { path: "a.ts", status: "M", insertions: 4, deletions: 1 },
+          { path: "a.ts", status: "M", staged: false, insertions: 4, deletions: 1 },
         ],
       },
     };
@@ -48,5 +48,21 @@ describe("mergeBrief", () => {
       ],
     };
     assert.equal(mergeBrief(SAMPLE_BRIEF, next).providers[0]?.windows.length, 1);
+  });
+
+  it("hides Git actions while switching environments", () => {
+    const previous = {
+      ...SAMPLE_BRIEF,
+      project: {
+        ...SAMPLE_BRIEF.project,
+        environmentId: "env_old",
+        gitActions: true,
+      },
+    };
+    const next = {
+      ...SAMPLE_BRIEF,
+      project: { ...SAMPLE_BRIEF.project, environmentId: "env_new" },
+    };
+    assert.equal(mergeBrief(previous, next).project.gitActions, false);
   });
 });

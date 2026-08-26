@@ -23,6 +23,10 @@ export function mergeBrief(
       branch: next.project.branch,
       git: next.project.git,
       environmentId: next.project.environmentId,
+      gitActions:
+        previous.project.environmentId === next.project.environmentId
+          ? previous.project.gitActions
+          : false,
     },
   };
 }

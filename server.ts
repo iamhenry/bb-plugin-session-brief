@@ -2,6 +2,11 @@ import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { projectBriefSchema, sessionBriefSchema } from "./contract";
 import { SAMPLE_BRIEF } from "./fixtures/session-brief";
+import {
+  gitHostContract,
+  gitMutationSchema,
+  gitPathSchema,
+} from "./host-contract";
 import { composeBrief, composeProject } from "./server/composeBrief";
 import {
   isProjectEnvironmentChange,
@@ -20,7 +25,7 @@ export const rpcContract = defineRpcContract({
   getDirtyFile: {
     input: z.object({
       environmentId: z.string(),
-      path: z.string().min(1),
+      path: gitPathSchema,
     }),
     output: z.discriminatedUnion("kind", [
       z.object({
@@ -39,10 +44,26 @@ export const rpcContract = defineRpcContract({
       }),
     ]),
   },
+  mutateGit: {
+    input: z.object({ environmentId: z.string() }).and(gitMutationSchema),
+    output: z.null(),
+  },
 });
 
 export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
+  const gitHost = bb.hosts.experimental_client({ contract: gitHostContract });
+
+  const environmentContext = async (environmentId: string) => {
+    const environment = await bb.sdk.environments.get({ environmentId });
+    if (!environment.isGitRepo || !environment.path) {
+      throw new Error("Git workspace unavailable");
+    }
+    return {
+      hostId: environment.hostId,
+      workspacePath: environment.path,
+    };
+  };
 
   const publishBrief = (threadId: string) => {
     bb.realtime.publish("brief-changed", { threadId });
@@ -96,7 +117,33 @@ export default async function plugin(bb: BbPluginApi) {
       }
     },
     getProject: async ({ threadId }) => {
-      return composeProject(bb, threadId);
+      const project = await composeProject(bb, threadId);
+      if (!project.environmentId || !project.git) return project;
+      try {
+        const context = await environmentContext(project.environmentId);
+        const files = await gitHost.call(
+          "status",
+          { workspacePath: context.workspacePath },
+          { hostId: context.hostId },
+        );
+        const stats = new Map(project.dirtyFiles.map((file) => [file.path, file]));
+        return {
+          ...project,
+          gitActions: true,
+          dirtyFiles: files.map((file) => ({
+            path: file.path,
+            status: file.status,
+            staged: file.staged,
+            insertions: stats.get(file.path)?.insertions ?? null,
+            deletions: stats.get(file.path)?.deletions ?? null,
+          })),
+        };
+      } catch (error) {
+        bb.log.warn(
+          `Git actions unavailable: ${error instanceof Error ? error.message : "unknown"}`,
+        );
+        return project;
+      }
     },
     getDirtyFile: async ({ environmentId, path }) => {
       try {
@@ -123,6 +170,16 @@ export default async function plugin(bb: BbPluginApi) {
         // Fall through to a missing result rather than inventing a patch.
       }
       return { kind: "missing" as const, path };
+    },
+    mutateGit: async ({ environmentId, ...mutation }) => {
+      const context = await environmentContext(environmentId);
+      await gitHost.call(
+        "mutate",
+        { workspacePath: context.workspacePath, ...mutation },
+        { hostId: context.hostId },
+      );
+      publishProject({ environmentId });
+      return null;
     },
   });
 

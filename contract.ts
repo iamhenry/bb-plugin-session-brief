@@ -61,6 +61,7 @@ export const todoItemSchema = z.object({
 export const dirtyFileSchema = z.object({
   path: z.string(),
   status: z.string(),
+  staged: z.boolean(),
   insertions: z.number().int().nonnegative().nullable(),
   deletions: z.number().int().nonnegative().nullable(),
 });
@@ -72,6 +73,7 @@ export const projectBriefSchema = z.object({
   behind: z.number().int().nonnegative(),
   git: z.boolean(),
   environmentId: z.string().nullable(),
+  gitActions: z.boolean(),
   insertions: z.number().int().nonnegative(),
   deletions: z.number().int().nonnegative(),
   dirtyFiles: z.array(dirtyFileSchema),

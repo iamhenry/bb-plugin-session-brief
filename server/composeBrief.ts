@@ -147,6 +147,7 @@ function dirtyFromStatus(status: unknown): {
   dirtyFiles: {
     path: string;
     status: string;
+    staged: boolean;
     insertions: number | null;
     deletions: number | null;
   }[];
@@ -165,6 +166,7 @@ function dirtyFromStatus(status: unknown): {
     return [{
       path: file.path,
       status: letter === "??" ? "?" : letter,
+      staged: false,
       insertions: typeof file.insertions === "number" ? Math.max(0, file.insertions) : null,
       deletions: typeof file.deletions === "number" ? Math.max(0, file.deletions) : null,
     }];
@@ -248,6 +250,7 @@ function projectFrom(
     behind: typeof mergeBase?.behindCount === "number" ? Math.max(0, mergeBase.behindCount) : 0,
     git,
     environmentId: environmentIdFrom(thread),
+    gitActions: false,
     insertions: dirty.insertions,
     deletions: dirty.deletions,
     dirtyFiles: dirty.dirtyFiles,
