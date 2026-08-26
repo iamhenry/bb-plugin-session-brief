@@ -2,33 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import type { ProjectBrief, SessionBrief } from "../contract";
 import { SAMPLE_BRIEF } from "../fixtures/session-brief";
+import { mergeBrief } from "../lib/mergeBrief";
 import type { rpcContract } from "../server";
 
 const FULL_REFRESH_MS = 30_000;
-const LIVE_PROJECT_POLL_MS = 2_000;
+const BRIEF_DEBOUNCE_MS = 300;
 const PROJECT_DEBOUNCE_MS = 80;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function keepLastGoodUsage(
-  previous: SessionBrief,
-  next: SessionBrief,
-): SessionBrief {
-  if (previous.threadId !== next.threadId) return next;
-  const prevPrimary = previous.providers[0];
-  const nextPrimary = next.providers[0];
-  if (
-    prevPrimary &&
-    nextPrimary &&
-    prevPrimary.id === nextPrimary.id &&
-    prevPrimary.windows.length > 0 &&
-    nextPrimary.windows.length === 0
-  ) {
-    return { ...next, providers: previous.providers };
-  }
-  return next;
 }
 
 function matchesProjectSignal(
@@ -84,48 +66,77 @@ export function useSessionBrief(
     }, PROJECT_DEBOUNCE_MS);
   }, [refreshProject]);
 
+  const briefInFlight = useRef(false);
+  const briefQueued = useRef(false);
+  const threadIdRef = useRef(threadId);
+  threadIdRef.current = threadId;
   const refresh = useCallback(() => {
+    if (briefInFlight.current) {
+      briefQueued.current = true;
+      return;
+    }
+    briefInFlight.current = true;
+    const requestedId = threadId;
     void rpc
-      .call("getBrief", { threadId })
+      .call("getBrief", { threadId: requestedId })
       .then((next) => {
-        setBrief((previous) => keepLastGoodUsage(previous, next));
-        // Project was snapshotted before usage APIs; refresh it so a late
-        // getBrief cannot clobber a newer dirty-file list.
-        scheduleProjectRefresh();
+        if (threadIdRef.current !== requestedId) return;
+        setBrief((previous) => mergeBrief(previous, next));
       })
       .catch(() => {
         // Keep the last good snapshot; do not flash the fixture.
+      })
+      .finally(() => {
+        briefInFlight.current = false;
+        if (!briefQueued.current) return;
+        briefQueued.current = false;
+        if (threadIdRef.current === requestedId) refresh();
       });
-  }, [rpc, scheduleProjectRefresh, threadId]);
+  }, [rpc, threadId]);
+
+  const briefTimer = useRef<number | null>(null);
+  const scheduleBriefRefresh = useCallback(() => {
+    if (briefTimer.current !== null) {
+      window.clearTimeout(briefTimer.current);
+    }
+    briefTimer.current = window.setTimeout(() => {
+      briefTimer.current = null;
+      refresh();
+    }, BRIEF_DEBOUNCE_MS);
+  }, [refresh]);
 
   useEffect(() => {
     return () => {
       if (projectTimer.current !== null) {
         window.clearTimeout(projectTimer.current);
       }
+      if (briefTimer.current !== null) {
+        window.clearTimeout(briefTimer.current);
+      }
     };
   }, []);
 
   useEffect(() => {
     refresh();
+    if (!live) return;
     const timer = window.setInterval(refresh, FULL_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [refresh]);
+  }, [live, refresh]);
 
   useEffect(() => {
     if (!live) return;
     refreshProject();
-    const timer = window.setInterval(refreshProject, LIVE_PROJECT_POLL_MS);
-    return () => window.clearInterval(timer);
   }, [live, refreshProject]);
 
   useRealtime("brief-changed", (payload) => {
+    if (!live) return;
     if (!isRecord(payload) || !payload.threadId || payload.threadId === threadId) {
-      refresh();
+      scheduleBriefRefresh();
     }
   });
 
   useRealtime("project-changed", (payload) => {
+    if (!live) return;
     if (
       matchesProjectSignal(payload, {
         threadId,

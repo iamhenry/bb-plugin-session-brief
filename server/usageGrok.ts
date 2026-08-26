@@ -7,6 +7,14 @@ import {
   parseGrokUserTier,
   pickGrokAuth,
 } from "./grokAuth";
+import {
+  markUsageBackoff,
+  recallUsage,
+  rememberUsage,
+  usageFetchDue,
+} from "./usageCache";
+
+const CACHE_KEY = "grok";
 
 const GROK_BILLING_URL =
   "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
@@ -123,6 +131,9 @@ export async function grokUsage(args: {
   providerId: string;
   contextPercent: number | null;
 }): Promise<ProviderUsage> {
+  const cached = recallUsage(CACHE_KEY);
+  if (!usageFetchDue(CACHE_KEY) && cached) return cached;
+
   const base = {
     id: args.providerId,
     name: "Grok",
@@ -154,7 +165,7 @@ export async function grokUsage(args: {
   }
 
   if (!token) {
-    return {
+    return cached ?? {
       ...base,
       status: expired ? "expired" : "unauthenticated",
       planLabel: planHint,
@@ -170,7 +181,7 @@ export async function grokUsage(args: {
     ]);
 
     if (billing.status === 401 || billing.status === 403) {
-      return {
+      return cached ?? {
         ...base,
         status: "unauthenticated",
         planLabel: planHint,
@@ -180,7 +191,8 @@ export async function grokUsage(args: {
     }
 
     if (billing.status < 200 || billing.status >= 300 || billing.body === null) {
-      return {
+      markUsageBackoff(CACHE_KEY);
+      return cached ?? {
         ...base,
         status: "ok",
         planLabel: parseGrokUserTier(user.body) ?? planHint,
@@ -201,15 +213,18 @@ export async function grokUsage(args: {
             },
           ];
 
-    return {
+    const usage: ProviderUsage = {
       ...base,
       status: "ok",
       planLabel: parseGrokUserTier(user.body) ?? planHint,
       message: null,
       windows,
     };
+    rememberUsage(CACHE_KEY, usage);
+    return windows.length > 0 ? usage : (cached ?? usage);
   } catch {
-    return {
+    markUsageBackoff(CACHE_KEY);
+    return cached ?? {
       ...base,
       status: "ok",
       planLabel: planHint,

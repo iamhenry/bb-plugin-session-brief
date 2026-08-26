@@ -2,6 +2,12 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import type { ProviderUsage } from "../contract";
 import { loadPiOpenCodeAuth, pickNamedOauthAccess } from "./authFiles";
 import { parseChatgptUsage } from "./usageChatgptParse";
+import {
+  markUsageBackoff,
+  recallUsage,
+  rememberUsage,
+  usageFetchDue,
+} from "./usageCache";
 
 const USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
 const FETCH_MS = 3_000;
@@ -34,12 +40,15 @@ export async function chatgptUsage(args: {
   displayName: string;
   id: string;
 }): Promise<ProviderUsage> {
+  const cached = recallUsage(args.id);
+  if (!usageFetchDue(args.id) && cached) return cached;
+
   const bags = await loadPiOpenCodeAuth(args.bb, args.hostId);
   const picked = pickNamedOauthAccess(bags, ["openai-codex", "openai"]);
   const base = { id: args.id, name: args.displayName };
 
   if (!picked || picked.expired || !picked.token) {
-    return {
+    return cached ?? {
       ...base,
       status: picked?.expired ? "expired" : "unauthenticated",
       planLabel: null,
@@ -51,7 +60,7 @@ export async function chatgptUsage(args: {
   try {
     const result = await getJson(USAGE_URL, picked.token);
     if (result.status === 401 || result.status === 403) {
-      return {
+      return cached ?? {
         ...base,
         status: "unauthenticated",
         planLabel: null,
@@ -70,15 +79,18 @@ export async function chatgptUsage(args: {
               resetsAt: parsed.resetsAt,
             },
           ];
-    return {
+    const usage: ProviderUsage = {
       ...base,
       status: "ok",
       planLabel: parsed.planLabel,
       message: null,
       windows,
     };
+    rememberUsage(args.id, usage);
+    return windows.length > 0 ? usage : (cached ?? usage);
   } catch {
-    return {
+    markUsageBackoff(args.id);
+    return cached ?? {
       ...base,
       status: "ok",
       planLabel: null,

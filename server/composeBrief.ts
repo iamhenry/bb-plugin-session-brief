@@ -355,11 +355,18 @@ export async function composeBrief(
   threadId: string,
 ): Promise<SessionBrief> {
   const thread = await loadThread(bb, threadId);
+  const projectId =
+    isRecord(thread) && typeof thread.projectId === "string"
+      ? thread.projectId
+      : null;
   const [listed, timeline, options, project] = await Promise.all([
     bb.sdk.threads.list({ parentThreadId: threadId, limit: 50 }),
     bb.sdk.threads.timeline({ threadId, summaryOnly: "true" }),
     bb.sdk.threads.defaultExecutionOptions({ threadId }).catch(() => null),
-    loadProjectBrief(bb, thread),
+    // ponytail: git status lives on getProject; lifecycle getBrief must not block the loop
+    projectId
+      ? bb.sdk.projects.get({ projectId }).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   const context = contextFromTimeline(timeline);
@@ -383,7 +390,7 @@ export async function composeBrief(
     providerId,
     model,
     context,
-    project,
+    project: projectFrom(thread, project, null),
     providers: [usage],
     children: listedThreads(listed).map(mapChild),
     todos: todosFromTimeline(timeline),
