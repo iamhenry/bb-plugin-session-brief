@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   experimental_useSidebarThreadActions,
@@ -15,6 +15,75 @@ import {
 } from "./mapSidebarSubthreads";
 import { SessionBriefCard } from "./SessionBriefCard";
 
+const CARD_WIDTH_PX = 20 * 16; // w-20rem, must match SessionBriefCard
+const PANE_GUTTER_PX = 24;
+const MIN_PANE_WIDTH_PX = CARD_WIDTH_PX + PANE_GUTTER_PX;
+
+function useCardAnchor() {
+  const [timeline, setTimeline] = useState<HTMLElement | null>(null);
+  const [header, setHeader] = useState<HTMLElement | null>(null);
+  const [toc, setToc] = useState<HTMLElement | null>(null);
+  const [timelineWidth, setTimelineWidth] = useState<number | null>(null);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  const triggerRef = useCallback((el: HTMLButtonElement | null) => {
+    if (!el) {
+      setTimeline(null);
+      setHeader(null);
+      return;
+    }
+    setTimeline(
+      el.closest<HTMLElement>(
+        '[data-panel-id="thread-detail-timeline-panel"]',
+      ),
+    );
+    setHeader(el.closest<HTMLElement>("header"));
+  }, []);
+
+  useEffect(() => {
+    if (!timeline) return;
+    const timelineEl = timeline;
+    const group = timelineEl.closest<HTMLElement>("[data-panel-group]");
+    let observedToc: HTMLElement | null = null;
+    const observer = new ResizeObserver(measure);
+
+    function measure() {
+      const timelineRect = timelineEl.getBoundingClientRect();
+      const groupWidth = group?.getBoundingClientRect().width;
+      setTimelineWidth(timelineRect.width);
+      setRightPanelOpen(
+        groupWidth !== undefined && timelineRect.width < groupWidth - 1,
+      );
+
+      const nextToc =
+        timelineEl.querySelector<HTMLElement>("[data-thread-toc]");
+      if (nextToc !== observedToc) {
+        if (observedToc) observer.unobserve(observedToc);
+        observedToc = nextToc;
+        if (observedToc) observer.observe(observedToc);
+      }
+      const rect = nextToc?.getBoundingClientRect();
+      setToc(rect && rect.width > 0 && rect.height > 0 ? nextToc : null);
+    }
+
+    observer.observe(timelineEl);
+    if (group) observer.observe(group);
+    const mutations = new MutationObserver(() => {
+      const nextToc =
+        timelineEl.querySelector<HTMLElement>("[data-thread-toc]");
+      if (nextToc !== observedToc) measure();
+    });
+    mutations.observe(timelineEl, { childList: true, subtree: true });
+    measure();
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, [timeline]);
+
+  return { triggerRef, header, toc, timelineWidth, rightPanelOpen };
+}
+
 export function SessionBriefHost({
   threadId,
   isCompactViewport,
@@ -29,10 +98,30 @@ export function SessionBriefHost({
   const actions = experimental_useSidebarThreadActions();
   const navigate = useBbNavigate();
   const portalScope = usePortalScopeProps();
+  const { triggerRef, header, toc, timelineWidth, rightPanelOpen } =
+    useCardAnchor();
+  const wasUsable = useRef(true);
+  const restoreWhenUsable = useRef(false);
+  function handleOpenChange(nextOpen: boolean) {
+    restoreWhenUsable.current = false;
+    setOpen(nextOpen);
+  }
 
   useEffect(() => {
-    if (isCompactViewport) setOpen(false);
-  }, [isCompactViewport]);
+    if (timelineWidth === null) return;
+    const usable =
+      !isCompactViewport &&
+      !rightPanelOpen &&
+      timelineWidth >= MIN_PANE_WIDTH_PX;
+    if (wasUsable.current && !usable) {
+      restoreWhenUsable.current = open;
+      setOpen(false);
+    } else if (!wasUsable.current && usable) {
+      if (restoreWhenUsable.current) setOpen(true);
+      restoreWhenUsable.current = false;
+    }
+    wasUsable.current = usable;
+  }, [isCompactViewport, open, rightPanelOpen, timelineWidth]);
 
   const liveChildren = useMemo(
     () => mapSidebarSubthreads(threads, threadId),
@@ -48,9 +137,10 @@ export function SessionBriefHost({
   );
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="ghost"
           size="icon"
@@ -61,14 +151,19 @@ export function SessionBriefHost({
         </Button>
       </Popover.Trigger>
       {open ? (
-        <Popover.Portal>
+        <Popover.Portal container={toc ?? header ?? undefined}>
           <div
             {...portalScope}
-            className="fixed top-14 right-3 z-50 outline-none"
+            style={toc ? { right: 0, bottom: "calc(100% + 12px)" } : undefined}
+            className={
+              toc
+                ? "absolute z-50 outline-none"
+                : "absolute top-14 right-3 z-50 outline-none"
+            }
           >
             <SessionBriefCard
               brief={cardBrief}
-              onClose={() => setOpen(false)}
+              onClose={() => handleOpenChange(false)}
               onOpenChild={(id) => {
                 actions.open(id);
               }}
