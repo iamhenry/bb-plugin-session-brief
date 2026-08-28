@@ -40,7 +40,14 @@ function SubthreadRow({
       <span className="min-w-0 flex-1 truncate text-foreground">
         {child.title}
       </span>
-      <span className="shrink-0 tabular-nums text-muted-foreground">
+      <span
+        className={cn(
+          "shrink-0 tabular-nums",
+          child.status === "running"
+            ? "font-medium text-success"
+            : "text-muted-foreground",
+        )}
+      >
         {rowMeta(child, nowMs)}
       </span>
     </button>
