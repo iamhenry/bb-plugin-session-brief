@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { TodoItem, TodoStatus } from "../../../contract";
 import { todoProgress } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
@@ -35,6 +36,7 @@ function TodoRow({ todo }: { todo: TodoItem }) {
 }
 
 export function TodosSection({ todos }: { todos: readonly TodoItem[] }) {
+  const [collapsed, setCollapsed] = useState(false);
   const { done, total } = todoProgress(todos);
   return (
     <section className="border-t border-border px-2.5 py-1 pb-2">
@@ -42,8 +44,11 @@ export function TodosSection({ todos }: { todos: readonly TodoItem[] }) {
         icon="ListTodo"
         title="Todos"
         accessory={total === 0 ? "0" : `${done}/${total}`}
+        collapsible
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((value) => !value)}
       />
-      {todos.length === 0 ? (
+      {collapsed ? null : todos.length === 0 ? (
         <p className="px-1 py-1.5 text-[11px] leading-4 text-muted-foreground">
           No todos on this thread
         </p>

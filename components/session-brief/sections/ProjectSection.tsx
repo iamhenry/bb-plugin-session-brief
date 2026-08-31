@@ -91,6 +91,7 @@ export function ProjectSection({
   onOpenDirtyFile?: (file: DirtyFile) => void;
 }) {
   const rpc = useRpc<typeof rpcContract>();
+  const [collapsed, setCollapsed] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const branchLabel = project.branch
@@ -131,8 +132,14 @@ export function ProjectSection({
 
   return (
     <section className="border-t border-border px-2.5 py-1 pb-2">
-      <SectionHeader title="Project" accessory={project.name} />
-      {branchLabel ? (
+      <SectionHeader
+        title="Project"
+        accessory={project.name}
+        collapsible
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((value) => !value)}
+      />
+      {!collapsed && branchLabel ? (
         <div className="flex items-center gap-1.5 px-1 py-1 text-[11px] leading-4 text-muted-foreground">
           <Icon name="GitBranch" className="size-3.5 shrink-0" aria-hidden />
           <span className="min-w-0 flex-1 truncate">{branchLabel}</span>
@@ -150,7 +157,7 @@ export function ProjectSection({
           ) : null}
         </div>
       ) : null}
-      {dirty.length > 0 ? (
+      {!collapsed && dirty.length > 0 ? (
         <>
           <div className="max-h-40 overflow-y-auto">
             {dirty.map((file) => (

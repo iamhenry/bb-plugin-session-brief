@@ -16,6 +16,8 @@ import {
 import { SessionBriefCard } from "./SessionBriefCard";
 
 const CARD_WIDTH_PX = 20 * 16; // w-20rem, must match SessionBriefCard
+const CARD_MAX_HEIGHT_PX = 36 * 16; // max-h-36rem, must match SessionBriefCard
+const CARD_GAP_PX = 12;
 const PANE_GUTTER_PX = 24;
 const MIN_PANE_WIDTH_PX = CARD_WIDTH_PX + PANE_GUTTER_PX;
 
@@ -23,6 +25,7 @@ function useCardAnchor() {
   const [timeline, setTimeline] = useState<HTMLElement | null>(null);
   const [header, setHeader] = useState<HTMLElement | null>(null);
   const [toc, setToc] = useState<HTMLElement | null>(null);
+  const [maxCardHeight, setMaxCardHeight] = useState<number | null>(null);
   const [timelineWidth, setTimelineWidth] = useState<number | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
@@ -30,6 +33,8 @@ function useCardAnchor() {
     if (!el) {
       setTimeline(null);
       setHeader(null);
+      setToc(null);
+      setMaxCardHeight(null);
       return;
     }
     setTimeline(
@@ -63,11 +68,28 @@ function useCardAnchor() {
         if (observedToc) observer.observe(observedToc);
       }
       const rect = nextToc?.getBoundingClientRect();
-      setToc(rect && rect.width > 0 && rect.height > 0 ? nextToc : null);
+      const visibleToc = rect && rect.width > 0 && rect.height > 0;
+      setToc(visibleToc ? nextToc : null);
+      setMaxCardHeight(
+        visibleToc && header
+          ? Math.max(
+              0,
+              Math.min(
+                CARD_MAX_HEIGHT_PX,
+                Math.floor(
+                  rect.top -
+                    header.getBoundingClientRect().bottom -
+                    CARD_GAP_PX * 2,
+                ),
+              ),
+            )
+          : null,
+      );
     }
 
     observer.observe(timelineEl);
     if (group) observer.observe(group);
+    if (header) observer.observe(header);
     const mutations = new MutationObserver(() => {
       const nextToc =
         timelineEl.querySelector<HTMLElement>("[data-thread-toc]");
@@ -79,9 +101,16 @@ function useCardAnchor() {
       observer.disconnect();
       mutations.disconnect();
     };
-  }, [timeline]);
+  }, [header, timeline]);
 
-  return { triggerRef, header, toc, timelineWidth, rightPanelOpen };
+  return {
+    triggerRef,
+    header,
+    toc,
+    maxCardHeight,
+    timelineWidth,
+    rightPanelOpen,
+  };
 }
 
 export function SessionBriefHost({
@@ -98,8 +127,14 @@ export function SessionBriefHost({
   const actions = experimental_useSidebarThreadActions();
   const navigate = useBbNavigate();
   const portalScope = usePortalScopeProps();
-  const { triggerRef, header, toc, timelineWidth, rightPanelOpen } =
-    useCardAnchor();
+  const {
+    triggerRef,
+    header,
+    toc,
+    maxCardHeight,
+    timelineWidth,
+    rightPanelOpen,
+  } = useCardAnchor();
   const wasUsable = useRef(true);
   const restoreWhenUsable = useRef(false);
   function handleOpenChange(nextOpen: boolean) {
@@ -163,6 +198,7 @@ export function SessionBriefHost({
           >
             <SessionBriefCard
               brief={cardBrief}
+              maxHeight={maxCardHeight ?? undefined}
               onClose={() => handleOpenChange(false)}
               onOpenChild={(id) => {
                 actions.open(id);
