@@ -21,6 +21,9 @@ const CARD_GAP_PX = 12;
 const PANE_GUTTER_PX = 24;
 const MIN_PANE_WIDTH_PX = CARD_WIDTH_PX + PANE_GUTTER_PX;
 
+// ponytail: header remounts per thread; keep last explicit hide/show per session
+const preferredOpenByThread = new Map<string, boolean>();
+
 function useCardAnchor() {
   const [timeline, setTimeline] = useState<HTMLElement | null>(null);
   const [header, setHeader] = useState<HTMLElement | null>(null);
@@ -121,7 +124,9 @@ export function SessionBriefHost({
   projectId: string | null;
   isCompactViewport: boolean;
 }) {
-  const [open, setOpen] = useState(!isCompactViewport);
+  const [open, setOpen] = useState(
+    () => preferredOpenByThread.get(threadId) ?? !isCompactViewport,
+  );
   const brief = useSessionBrief(threadId, { live: open });
   const { threads } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
@@ -139,6 +144,7 @@ export function SessionBriefHost({
   const restoreWhenUsable = useRef(false);
   function handleOpenChange(nextOpen: boolean) {
     restoreWhenUsable.current = false;
+    preferredOpenByThread.set(threadId, nextOpen);
     setOpen(nextOpen);
   }
 
