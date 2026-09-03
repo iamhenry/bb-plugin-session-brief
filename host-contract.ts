@@ -17,7 +17,7 @@ export const gitMutationSchema = z.discriminatedUnion("action", [
     action: z.enum(["stage", "unstage", "discard"]),
     path: gitPathSchema,
   }),
-  z.object({ action: z.enum(["stage_all", "unstage_all"]) }),
+  z.object({ action: z.enum(["stage_all", "unstage_all", "discard_all"]) }),
 ]);
 
 export const gitHostContract = defineRpcContract({

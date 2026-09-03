@@ -62,7 +62,7 @@ function DirtyRow({
             title={file.staged ? "Unstage" : "Stage"}
           >
             <Icon
-              name={file.staged ? "ArrowTurnBackward" : "Plus"}
+              name={file.staged ? "Minus" : "Plus"}
               className="size-3"
               aria-hidden
             />
@@ -100,27 +100,33 @@ export function ProjectSection({
       ? "Detached"
       : null;
   const dirty = project.dirtyFiles;
+  const staged = dirty.filter((file) => file.staged);
+  const unstaged = dirty.filter((file) => !file.staged);
   const mutate = async (
-    action: "stage" | "unstage" | "discard" | "stage_all" | "unstage_all",
+    action: "stage" | "unstage" | "discard" | "stage_all" | "unstage_all" | "discard_all",
     file?: DirtyFile,
   ) => {
     if (!project.environmentId || pending) return;
     if (action === "discard" && file && !window.confirm(
       `Discard all changes to ${file.path}? This cannot be undone.`,
     )) return;
+    if (action === "discard_all" && !window.confirm(
+      "Discard all uncommitted changes? This cannot be undone.",
+    )) return;
     setPending(true);
     setError(null);
     try {
-      if (file && action !== "stage_all" && action !== "unstage_all") {
+      const bulk = action === "stage_all" || action === "unstage_all" || action === "discard_all";
+      if (bulk) {
+        await rpc.call("mutateGit", {
+          environmentId: project.environmentId,
+          action,
+        });
+      } else if (file) {
         await rpc.call("mutateGit", {
           environmentId: project.environmentId,
           action,
           path: file.path,
-        });
-      } else if (!file && (action === "stage_all" || action === "unstage_all")) {
-        await rpc.call("mutateGit", {
-          environmentId: project.environmentId,
-          action,
         });
       }
     } catch {
@@ -129,6 +135,17 @@ export function ProjectSection({
       setPending(false);
     }
   };
+  const rows = (files: DirtyFile[]) =>
+    files.map((file) => (
+      <DirtyRow
+        key={file.path}
+        file={file}
+        onOpen={onOpenDirtyFile}
+        onAction={(action, target) => void mutate(action, target)}
+        pending={pending}
+        actionsEnabled={project.gitActions}
+      />
+    ));
 
   return (
     <section className="border-t border-border px-2.5 py-1 pb-2">
@@ -160,16 +177,24 @@ export function ProjectSection({
       {!collapsed && dirty.length > 0 ? (
         <>
           <div className="max-h-40 overflow-y-auto">
-            {dirty.map((file) => (
-              <DirtyRow
-                key={file.path}
-                file={file}
-                onOpen={onOpenDirtyFile}
-                onAction={(action, target) => void mutate(action, target)}
-                pending={pending}
-                actionsEnabled={project.gitActions}
-              />
-            ))}
+            {staged.length > 0 ? (
+              <>
+                <p className="px-1 py-1 text-[11px] leading-4 text-muted-foreground">
+                  Staged Changes
+                </p>
+                {rows(staged)}
+                {unstaged.length > 0 ? (
+                  <>
+                    <p className="mt-0.5 border-t border-border px-1 py-1 text-[11px] leading-4 text-muted-foreground">
+                      Changes
+                    </p>
+                    {rows(unstaged)}
+                  </>
+                ) : null}
+              </>
+            ) : (
+              rows(dirty)
+            )}
           </div>
           <div
             className="mt-1 flex items-center gap-1.5 px-1 text-[11px] leading-4 text-muted-foreground"
@@ -202,6 +227,16 @@ export function ProjectSection({
                   className="rounded p-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
                   aria-label="Unstage all files"
                   title="Unstage all"
+                >
+                  <Icon name="Minus" className="size-3" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => void mutate("discard_all")}
+                  className="rounded p-0.5 hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                  aria-label="Discard all changes"
+                  title="Discard all"
                 >
                   <Icon name="ArrowTurnBackward" className="size-3" aria-hidden />
                 </button>

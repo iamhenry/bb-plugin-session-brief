@@ -82,6 +82,22 @@ export async function mutateGit(cwd: string, mutation: GitMutation) {
     );
     return;
   }
+  if (mutation.action === "discard_all") {
+    if (head) {
+      await git(cwd, [
+        "restore",
+        "--source=HEAD",
+        "--staged",
+        "--worktree",
+        "--",
+        ".",
+      ]);
+    } else {
+      await git(cwd, ["rm", "--cached", "-r", "--", "."]);
+    }
+    await git(cwd, ["clean", "-fd"]);
+    return;
+  }
 
   const status = parsePorcelain(
     await git(cwd, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),

@@ -64,6 +64,16 @@ describe("Git host actions", () => {
     assert.deepEqual(status(cwd), []);
   });
 
+  it("discards all staged and untracked changes", async () => {
+    const cwd = repo();
+    writeFileSync(join(cwd, "tracked.txt"), "after\n");
+    writeFileSync(join(cwd, "new.txt"), "new\n");
+    await mutateGit(cwd, { action: "stage_all" });
+    await mutateGit(cwd, { action: "discard_all" });
+    assert.equal(readFileSync(join(cwd, "tracked.txt"), "utf8"), "before\n");
+    assert.deepEqual(status(cwd), []);
+  });
+
   it("discards a staged rename", async () => {
     const cwd = repo();
     execFileSync("git", ["mv", "tracked.txt", "renamed.txt"], { cwd });
