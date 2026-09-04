@@ -58,6 +58,23 @@ export const todoItemSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]),
 });
 
+export const TASK_STATUSES = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "in_review",
+  "done",
+  "canceled",
+] as const;
+
+export const taskBriefSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  title: z.string(),
+  status: z.enum(TASK_STATUSES),
+  active: z.boolean(),
+});
+
 export const dirtyFileSchema = z.object({
   path: z.string(),
   status: z.string(),
@@ -87,6 +104,7 @@ export const sessionBriefSchema = z.object({
   project: projectBriefSchema,
   providers: z.array(providerUsageSchema),
   children: z.array(childThreadSchema),
+  tasks: z.array(taskBriefSchema).nullable(),
   todos: z.array(todoItemSchema),
 });
 
@@ -95,10 +113,12 @@ export type UsageWindow = z.infer<typeof usageWindowSchema>;
 export type ProviderUsage = z.infer<typeof providerUsageSchema>;
 export type ChildThread = z.infer<typeof childThreadSchema>;
 export type TodoItem = z.infer<typeof todoItemSchema>;
+export type TaskBrief = z.infer<typeof taskBriefSchema>;
 export type DirtyFile = z.infer<typeof dirtyFileSchema>;
 export type ProjectBrief = z.infer<typeof projectBriefSchema>;
 export type SessionBrief = z.infer<typeof sessionBriefSchema>;
 export type ChildStatus = ChildThread["status"];
 export type TodoStatus = TodoItem["status"];
+export type TaskStatus = TaskBrief["status"];
 export type ProviderUsageStatus = ProviderUsage["status"];
 export type ChildColorSlot = z.infer<typeof childColorSlotSchema>;

@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { ChildrenSection } from "./sections/ChildrenSection";
 import { ContextSection } from "./sections/ContextSection";
 import { ProjectSection } from "./sections/ProjectSection";
+import { TasksSection } from "./sections/TasksSection";
 import { TodosSection } from "./sections/TodosSection";
 import { UsageSection } from "./sections/UsageSection";
 
@@ -49,6 +50,7 @@ export function SessionBriefCard({
         />
         <UsageSection providers={brief.providers} />
         <ChildrenSection items={brief.children} onOpenChild={onOpenChild} />
+        {brief.tasks === null ? null : <TasksSection tasks={brief.tasks} />}
         <TodosSection todos={brief.todos} />
       </div>
     </aside>

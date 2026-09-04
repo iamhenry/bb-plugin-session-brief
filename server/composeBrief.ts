@@ -18,6 +18,7 @@ import { chatgptUsage } from "./usageChatgpt";
 import { grokUsage } from "./usageGrok";
 import { nativeUsage } from "./usageNative";
 import { ollamaUsage } from "./usageOllama";
+import { loadProjectTasks } from "./tasks";
 
 type ListedThread = {
   id: string;
@@ -362,13 +363,16 @@ export async function composeBrief(
     isRecord(thread) && typeof thread.projectId === "string"
       ? thread.projectId
       : null;
-  const [listed, timeline, options, project] = await Promise.all([
+  const [listed, timeline, options, project, tasks] = await Promise.all([
     bb.sdk.threads.list({ parentThreadId: threadId, limit: 50 }),
     bb.sdk.threads.timeline({ threadId, summaryOnly: "true" }),
     bb.sdk.threads.defaultExecutionOptions({ threadId }).catch(() => null),
     // ponytail: git status lives on getProject; lifecycle getBrief must not block the loop
     projectId
       ? bb.sdk.projects.get({ projectId }).catch(() => null)
+      : Promise.resolve(null),
+    projectId
+      ? loadProjectTasks(bb, projectId)
       : Promise.resolve(null),
   ]);
 
@@ -396,6 +400,7 @@ export async function composeBrief(
     project: projectFrom(thread, project, null),
     providers: [usage],
     children: listedThreads(listed).map(mapChild),
+    tasks,
     todos: todosFromTimeline(timeline),
   };
 }

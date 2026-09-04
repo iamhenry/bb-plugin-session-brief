@@ -41,5 +41,6 @@ export const SAMPLE_BRIEF: SessionBrief = {
       startedAtMs: now - 110_000,
     },
   ],
+  tasks: null,
   todos: [],
 };
