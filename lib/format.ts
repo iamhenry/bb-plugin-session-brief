@@ -38,15 +38,14 @@ export function formatElapsed(startedAtMs: number, nowMs = Date.now()): string |
   const elapsedMs = nowMs - startedAtMs;
   if (elapsedMs < 0) return null;
   const elapsedSec = Math.floor(elapsedMs / 1000);
-  if (elapsedSec < 60) return `${elapsedSec}s`;
-  const minutes = Math.floor(elapsedSec / 60);
+  const days = Math.floor(elapsedSec / 86_400);
+  const hours = Math.floor((elapsedSec % 86_400) / 3_600);
+  const minutes = Math.floor((elapsedSec % 3_600) / 60);
   const seconds = elapsedSec % 60;
-  if (minutes < 60) {
-    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remainMinutes = minutes % 60;
-  return remainMinutes === 0 ? `${hours}h` : `${hours}h ${remainMinutes}m`;
+  if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 export function todoProgress(todos: readonly TodoItem[]): {
