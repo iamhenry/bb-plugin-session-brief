@@ -25,7 +25,7 @@ export function SessionBriefCard({
     <aside
       aria-label="Session Brief"
       style={maxHeight === undefined ? undefined : { maxHeight }}
-      className="flex max-h-[min(36rem,calc(100vh-7rem))] w-[20rem] flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-md"
+      className="flex max-h-[min(36rem,calc(100vh-7rem))] w-[17.5rem] flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-md"
     >
       <header className="flex shrink-0 items-center gap-1 px-2.5 pt-2">
         <h2 className="min-w-0 flex-1 px-1 text-xs font-medium text-foreground">

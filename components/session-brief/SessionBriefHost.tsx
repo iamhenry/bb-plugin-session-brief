@@ -15,7 +15,7 @@ import {
 } from "./mapSidebarSubthreads";
 import { SessionBriefCard } from "./SessionBriefCard";
 
-const CARD_WIDTH_PX = 20 * 16; // w-20rem, must match SessionBriefCard
+const CARD_WIDTH_PX = 280; // w-17.5rem, must match SessionBriefCard
 const CARD_MAX_HEIGHT_PX = 36 * 16; // max-h-36rem, must match SessionBriefCard
 const CARD_GAP_PX = 12;
 const PANE_GUTTER_PX = 24;
