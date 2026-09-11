@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { useRpc } from "@get-bb/plugin-sdk/app";
+import { useState, type MouseEvent } from "react";
+import {
+  experimental_FileLink as FileLink,
+  useRpc,
+} from "@get-bb/plugin-sdk/app";
 import type { DirtyFile, ProjectBrief } from "../../../contract";
 import type { rpcContract } from "../../../server";
 import { Icon } from "@/components/ui/icon";
@@ -7,12 +10,14 @@ import { SectionHeader } from "../SectionHeader";
 
 function DirtyRow({
   file,
+  environmentId,
   onOpen,
   onAction,
   pending,
   actionsEnabled,
 }: {
   file: DirtyFile;
+  environmentId: string;
   onOpen?: (file: DirtyFile) => void;
   onAction: (action: "stage" | "unstage" | "discard", file: DirtyFile) => void;
   pending: boolean;
@@ -21,11 +26,17 @@ function DirtyRow({
   const plus = file.insertions;
   const minus = file.deletions;
   const nameStart = file.path.lastIndexOf("/") + 1;
+  const handleOpen = onOpen
+    ? (event: MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+        onOpen(file);
+      }
+    : undefined;
   return (
     <div className="group relative rounded-md hover:bg-state-hover focus-within:bg-state-hover">
-      <button
-        type="button"
-        onClick={() => onOpen?.(file)}
+      <FileLink
+        target={{ kind: "workspace", environmentId, path: file.path }}
+        onClick={handleOpen}
         className="flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <span className="w-3.5 shrink-0 text-center font-medium tabular-nums text-muted-foreground">
@@ -50,7 +61,7 @@ function DirtyRow({
             <span className="text-destructive">−{minus}</span>
           </span>
         ) : null}
-      </button>
+      </FileLink>
       {actionsEnabled ? (
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 bg-state-hover px-0.5 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
           <button
@@ -135,17 +146,21 @@ export function ProjectSection({
       setPending(false);
     }
   };
-  const rows = (files: DirtyFile[]) =>
-    files.map((file) => (
+  const rows = (files: DirtyFile[]) => {
+    const environmentId = project.environmentId;
+    if (!environmentId) return null;
+    return files.map((file) => (
       <DirtyRow
         key={file.path}
         file={file}
+        environmentId={environmentId}
         onOpen={onOpenDirtyFile}
         onAction={(action, target) => void mutate(action, target)}
         pending={pending}
         actionsEnabled={project.gitActions}
       />
     ));
+  };
 
   return (
     <section className="border-t border-border px-2.5 py-1 pb-2">

@@ -11,7 +11,7 @@
   "homepage": "https://github.com/iamhenry/bb-plugin-session-brief#readme",
   "engines": {
     "bb": ">=0.39",
-    "bbPluginSdk": ">=0.4.9"
+    "bbPluginSdk": ">=0.4.10"
   },
   "bb": {
     "name": "Session Brief",
@@ -36,7 +36,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@get-bb/plugin-sdk": "0.4.9",
+    "@get-bb/plugin-sdk": "0.4.10",
     "@radix-ui/react-dialog": "^1.1.19",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.0.0",
