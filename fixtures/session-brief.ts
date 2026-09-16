@@ -31,6 +31,8 @@ export const SAMPLE_BRIEF: SessionBrief = {
       providerId: "pi",
       colorSlot: 1,
       startedAtMs: now - 600_000,
+      lastActivityMs: now - 600_000,
+      pinned: false,
     },
     {
       id: "thr_child_2",
@@ -39,6 +41,8 @@ export const SAMPLE_BRIEF: SessionBrief = {
       providerId: "pi",
       colorSlot: 2,
       startedAtMs: now - 110_000,
+      lastActivityMs: now - 110_000,
+      pinned: false,
     },
   ],
   tasks: null,

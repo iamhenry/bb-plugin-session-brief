@@ -50,6 +50,9 @@ export const childThreadSchema = z.object({
   providerId: z.string(),
   colorSlot: childColorSlotSchema,
   startedAtMs: z.number().nullable(),
+  /** Inbox retention input; null when the feed gave no activity time. */
+  lastActivityMs: z.number().nullable().default(null),
+  pinned: z.boolean().default(false),
 });
 
 export const todoItemSchema = z.object({
