@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useSessionBrief } from "../../hooks/useSessionBrief";
-import { filterInbox } from "../../lib/inbox";
 import { usePortalScopeProps } from "../../lib/portal-scope";
 import {
   mapSidebarSubthreads,
@@ -170,21 +169,12 @@ export function SessionBriefHost({
     [threads, threadId],
   );
 
-  // ponytail: 60s tick is plenty for a 48h retention window
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  useEffect(() => {
-    if (!open) return;
-    setNowMs(Date.now());
-    const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, [open]);
-
   const cardBrief = useMemo(
     () => ({
       ...brief,
-      children: filterInbox(mergeSubthreads(brief.children, liveChildren), nowMs),
+      children: mergeSubthreads(brief.children, liveChildren),
     }),
-    [brief, liveChildren, nowMs],
+    [brief, liveChildren],
   );
 
   return (

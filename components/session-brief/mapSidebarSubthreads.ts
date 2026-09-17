@@ -48,8 +48,6 @@ export function mapSidebarSubthreads(
         providerId: thread.providerId,
         colorSlot: colorSlotFromId(thread.id),
         startedAtMs: thread.createdAt,
-        lastActivityMs: thread.updatedAt,
-        pinned: thread.isPinned,
       };
     });
 }

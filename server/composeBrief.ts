@@ -28,8 +28,6 @@ type ListedThread = {
   status: string;
   hasPendingInteraction: boolean;
   createdAt: number;
-  pinnedAt?: number | null;
-  updatedAt?: number | null;
   runtime?: { displayStatus?: string };
   activity?: {
     activeBackgroundAgentCount: number;
@@ -80,8 +78,6 @@ function mapChild(row: ListedThread): ChildThread {
     providerId: row.providerId,
     colorSlot: colorSlotFromId(row.id),
     startedAtMs: typeof row.createdAt === "number" ? row.createdAt : null,
-    lastActivityMs: typeof row.updatedAt === "number" ? row.updatedAt : null,
-    pinned: typeof row.pinnedAt === "number",
   };
 }
 
