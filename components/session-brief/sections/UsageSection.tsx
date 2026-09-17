@@ -17,7 +17,7 @@ function shortWindowName(label: string): string {
   return label;
 }
 
-function collapsedHeadline(primary: ProviderUsage | undefined): string {
+export function usageHeadline(primary: ProviderUsage | undefined): string {
   if (!primary) return "—";
   if (primary.windows.length > 0) {
     return primary.windows
@@ -84,7 +84,7 @@ export function UsageSection({
       <SectionHeader
         icon="TimeSchedule"
         title="Usage"
-        accessory={collapsedHeadline(primary)}
+        accessory={usageHeadline(primary)}
         collapsible
         collapsed={collapsed}
         onToggle={() => setCollapsed((value) => !value)}

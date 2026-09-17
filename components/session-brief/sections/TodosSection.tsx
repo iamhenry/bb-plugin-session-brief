@@ -35,15 +35,19 @@ function TodoRow({ todo }: { todo: TodoItem }) {
   );
 }
 
+export function todoHeadline(todos: readonly TodoItem[]): string {
+  const { done, total } = todoProgress(todos);
+  return total === 0 ? "0" : `${done}/${total}`;
+}
+
 export function TodosSection({ todos }: { todos: readonly TodoItem[] }) {
   const [collapsed, setCollapsed] = useState(false);
-  const { done, total } = todoProgress(todos);
   return (
     <section className="border-t border-border px-2.5 py-1 pb-2">
       <SectionHeader
         icon="ListTodo"
         title="Todos"
-        accessory={total === 0 ? "0" : `${done}/${total}`}
+        accessory={todoHeadline(todos)}
         collapsible
         collapsed={collapsed}
         onToggle={() => setCollapsed((value) => !value)}
