@@ -44,11 +44,11 @@ clear unauthenticated message, with no fabricated values and no crash.
 
 ## Pipeline State
 
-- stage: Publishing
+- stage: PR Open
 - exact candidate: base `824d5438eba6a0e04c91b6ef7b35a6ac935913c5` + delivery diff `9a354b55c44660eb748483c16c18c8957e1b510437650cac0257ea34128c14ba`
 - latest checkpoint/receipt: `verification/result.md` returned `PASS`; signed-in and isolated signed-out UI evidence exists and all cited files passed `test -f`
-- next owner/action: Commit the verified candidate, push a feature branch, and open a PR against `main`
-- allowed writes: Git commit, feature branch push, and GitHub PR metadata; no implementation changes
+- next owner/action: GitHub review of PR #2
+- allowed writes: none without further authority
 - retries consumed: reproduction 1; gather-context 1; create-issue 1; build 1; code-quality 1; verification 1
 - blocker/unlock condition: none
 
@@ -76,3 +76,4 @@ clear unauthenticated message, with no fabricated values and no crash.
 - Verification prerequisite decision — user prohibited disabling the live Ollama auth because active agents depend on it — next: one bounded isolated-runtime repair attempt; no live auth mutation permitted
 - Verification Gate Repair — candidate base `824d5438eba6a0e04c91b6ef7b35a6ac935913c5` + delivery diff `9a354b55c44660eb748483c16c18c8957e1b510437650cac0257ea34128c14ba` — `PASS`; signed-in Weekly/Session rows and isolated unauthenticated state proven; all cited paths passed `test -f` — owner evidence: `verification/result.md`, `verification/screenshots/ollama-signed-in-usage.png`, `verification/screenshots/ollama-unauthenticated.png` — next: PR placeholder awaiting explicit publication authority
 - Publication Authorization — candidate base `824d5438eba6a0e04c91b6ef7b35a6ac935913c5` + delivery diff `9a354b55c44660eb748483c16c18c8957e1b510437650cac0257ea34128c14ba` — user authorized commit, push, and PR creation — next: publish the verified candidate without implementation changes
+- Publication — candidate base `824d5438eba6a0e04c91b6ef7b35a6ac935913c5` + delivery diff `9a354b55c44660eb748483c16c18c8957e1b510437650cac0257ea34128c14ba` — branch `fix/ollama-cloud-usage` pushed and PR #2 opened — evidence: https://github.com/iamhenry/bb-plugin-session-brief/pull/2 — next: GitHub review
