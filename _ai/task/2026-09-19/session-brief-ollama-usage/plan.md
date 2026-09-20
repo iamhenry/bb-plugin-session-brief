@@ -50,8 +50,8 @@ As a user signed in to Ollama Cloud, I want Session Brief to show my current Wee
 #### Happy path: Signed-in Ollama Cloud usage is displayed
 
 ```gherkin
-Given the user is signed in to Ollama Cloud and is using an Ollama Cloud model  
-When the user opens Session Brief Usage  
+Given the user is signed in to Ollama Cloud and is using an Ollama Cloud model
+When the user opens Session Brief Usage
 Then the user sees Weekly and Session usage in the existing usage-row and percentage treatment instead of the truncated no-data message
 ```
 
@@ -62,8 +62,8 @@ Acceptance Criteria References:
 #### Edge path: Unauthenticated Ollama Cloud state is clear and safe
 
 ```gherkin
-Given the user is signed out of Ollama Cloud or has invalid Ollama Cloud credentials  
-When the user opens Session Brief Usage  
+Given the user is signed out of Ollama Cloud or has invalid Ollama Cloud credentials
+When the user opens Session Brief Usage
 Then the user sees a clear unauthenticated message, no fabricated usage values, and no crash
 ```
 
