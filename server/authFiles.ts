@@ -112,3 +112,20 @@ export function pickNamedOauthAccess(
   if (expiredToken) return { token: expiredToken, expired: false };
   return null;
 }
+
+export function pickNamedApiKey(
+  bags: readonly unknown[],
+  names: readonly string[],
+): string | null {
+  for (const bag of bags) {
+    if (!isRecord(bag)) continue;
+    for (const name of names) {
+      const entry = bag[name];
+      if (!isRecord(entry) || entry.type !== "api") continue;
+      if (typeof entry.key === "string" && entry.key.length > 0) {
+        return entry.key;
+      }
+    }
+  }
+  return null;
+}

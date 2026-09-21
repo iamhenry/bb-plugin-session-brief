@@ -349,6 +349,8 @@ async function usageForModel(args: {
   }
 
   return ollamaUsage({
+    bb: args.bb,
+    hostId: args.hostId,
     providerId: "ollama",
     contextPercent: null,
   });
