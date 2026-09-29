@@ -1,6 +1,10 @@
+import { execFile } from "node:child_process";
 import { homedir } from "node:os";
+import { promisify } from "node:util";
 import { dirname, join } from "node:path";
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
+
+const exec = promisify(execFile);
 
 function piAuthPath(home: string): string {
   const fromEnv = process.env.PI_CODING_AGENT_DIR;
@@ -72,7 +76,27 @@ export async function loadPiOpenCodeAuth(
     const raw = await readJson(bb, hostId, path, rootFor(path, home));
     if (raw !== null) bags.push(raw);
   }
+  const dbBag = await readOpenCodeDbAuth(join(dirname(openCodeAuthPath(home)), "opencode.db"));
+  if (dbBag !== null) bags.push(dbBag);
   return bags;
+}
+
+/** OpenCode v2 keeps live credentials in opencode.db, not auth.json. Local host only. */
+async function readOpenCodeDbAuth(dbPath: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { stdout } = await exec(
+      "sqlite3",
+      ["-readonly", "-json", dbPath, "select integration_id, value from credential where active = 1"],
+      { timeout: 3_000 },
+    );
+    const bag: Record<string, unknown> = {};
+    for (const row of JSON.parse(stdout || "[]") as { integration_id: string; value: string }[]) {
+      bag[row.integration_id] = JSON.parse(row.value);
+    }
+    return bag;
+  } catch {
+    return null;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

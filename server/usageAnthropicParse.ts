@@ -34,7 +34,7 @@ function windowsFromLimits(body: Record<string, unknown>): UsageWindow[] {
     const label =
       kind === "session" || kind === "five_hour"
         ? "5h Limit"
-        : kind.startsWith("weekly")
+        : kind.startsWith("weekly") && !row.scope // skip per-model caps
           ? "Weekly Limit"
           : null;
     if (!label) continue;

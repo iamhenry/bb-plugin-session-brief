@@ -51,8 +51,14 @@ describe("parseAnthropicUsage", () => {
           percent: 0,
           resets_at: "2026-08-26T13:00:00Z",
         },
+        {
+          kind: "weekly_scoped",
+          percent: 0,
+          scope: { model: { display_name: "Fable" } },
+        },
       ],
     });
+    assert.equal(windows.length, 2);
     assert.equal(windows[0]?.label, "5h Limit");
     assert.equal(windows[0]?.usedPercent, 7);
     assert.equal(windows[1]?.label, "Weekly Limit");
