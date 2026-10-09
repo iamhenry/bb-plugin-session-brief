@@ -157,7 +157,7 @@ function SessionBriefStrip({
           />
           <SummaryCell
             label="Subthreads"
-            value={String(brief.children.length)}
+            value={`${brief.children.filter((c) => c.status === "running").length}/${brief.children.length}`}
             expanded={activeSection === "children"}
             detailsId={detailsId}
             onSelect={() => selectSection("children")}

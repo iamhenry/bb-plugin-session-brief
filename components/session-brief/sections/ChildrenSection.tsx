@@ -76,7 +76,7 @@ export function ChildrenSection({
       <SectionHeader
         icon="UserRound"
         title="Subthreads"
-        accessory={items.length}
+        accessory={`${items.filter((i) => i.status === "running").length}/${items.length}`}
         collapsible
         collapsed={collapsed}
         onToggle={() => setCollapsed((value) => !value)}
