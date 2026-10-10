@@ -28,6 +28,7 @@ type ListedThread = {
   status: string;
   hasPendingInteraction: boolean;
   createdAt: number;
+  updatedAt?: number;
   runtime?: { displayStatus?: string };
   activity?: {
     activeBackgroundAgentCount: number;
@@ -78,6 +79,7 @@ function mapChild(row: ListedThread): ChildThread {
     providerId: row.providerId,
     colorSlot: colorSlotFromId(row.id),
     startedAtMs: typeof row.createdAt === "number" ? row.createdAt : null,
+    updatedAtMs: typeof row.updatedAt === "number" ? row.updatedAt : null,
   };
 }
 

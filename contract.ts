@@ -50,6 +50,7 @@ export const childThreadSchema = z.object({
   providerId: z.string(),
   colorSlot: childColorSlotSchema,
   startedAtMs: z.number().nullable(),
+  updatedAtMs: z.number().nullable().optional(),
 });
 
 export const todoItemSchema = z.object({

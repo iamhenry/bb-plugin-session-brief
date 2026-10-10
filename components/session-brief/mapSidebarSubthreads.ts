@@ -48,6 +48,7 @@ export function mapSidebarSubthreads(
         providerId: thread.providerId,
         colorSlot: colorSlotFromId(thread.id),
         startedAtMs: thread.createdAt,
+        updatedAtMs: thread.updatedAt,
       };
     });
 }
