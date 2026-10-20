@@ -1,16 +1,19 @@
-import { useState, type MouseEvent } from "react";
-import {
-  experimental_FileLink as FileLink,
-  useRpc,
-} from "@get-bb/plugin-sdk/app";
+import { useRef, useState, type MouseEvent } from "react";
+import { useBbNavigate, useRpc } from "@get-bb/plugin-sdk/app";
 import type { DirtyFile, ProjectBrief } from "../../../contract";
 import type { rpcContract } from "../../../server";
 import { Icon } from "@/components/ui/icon";
 import { SectionHeader } from "../SectionHeader";
+import { FileContextMenu, type FileMenuItem } from "./FileContextMenu";
+
+function copyText(text: string) {
+  void navigator.clipboard?.writeText(text).catch(() => undefined);
+}
 
 function DirtyRow({
   file,
   environmentId,
+  rootPath,
   onOpen,
   onAction,
   pending,
@@ -18,6 +21,7 @@ function DirtyRow({
 }: {
   file: DirtyFile;
   environmentId: string;
+  rootPath: string | null;
   onOpen?: (file: DirtyFile) => void;
   onAction: (action: "stage" | "unstage" | "discard", file: DirtyFile) => void;
   pending: boolean;
@@ -26,17 +30,43 @@ function DirtyRow({
   const plus = file.insertions;
   const minus = file.deletions;
   const nameStart = file.path.lastIndexOf("/") + 1;
-  const handleOpen = onOpen
-    ? (event: MouseEvent<HTMLAnchorElement>) => {
-        event.preventDefault();
-        onOpen(file);
-      }
-    : undefined;
+  const navigate = useBbNavigate();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const rowRef = useRef<HTMLButtonElement>(null);
+  const openOptions = {
+    target: { kind: "workspace" as const, environmentId, path: file.path },
+    location: null,
+  };
+  const menuItems: FileMenuItem[] = [
+    { kind: "item", label: "Open preview", onSelect: () => navigate.experimental_openFilePreview(openOptions) },
+    { kind: "item", label: "Open externally", onSelect: () => navigate.experimental_openFileExternally(openOptions) },
+    { kind: "separator" },
+    {
+      kind: "item",
+      label: "Copy file path",
+      onSelect: () => copyText(rootPath ? `${rootPath.replace(/\/+$/, "")}/${file.path}` : file.path),
+    },
+    { kind: "item", label: "Copy file name", onSelect: () => copyText(file.path.slice(nameStart)) },
+  ];
+  const handleContextMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    // Keyboard-opened menus (Shift+F10) report 0,0; anchor them to the row.
+    const rect = event.currentTarget.getBoundingClientRect();
+    const fromKeyboard = event.clientX === 0 && event.clientY === 0;
+    setMenu({
+      x: fromKeyboard ? rect.left : event.clientX,
+      y: fromKeyboard ? rect.bottom : event.clientY,
+    });
+  };
   return (
     <div className="group relative rounded-md hover:bg-state-hover focus-within:bg-state-hover">
-      <FileLink
-        target={{ kind: "workspace", environmentId, path: file.path }}
-        onClick={handleOpen}
+      <button
+        ref={rowRef}
+        type="button"
+        onClick={() =>
+          onOpen ? onOpen(file) : navigate.experimental_openFilePreview(openOptions)
+        }
+        onContextMenu={handleContextMenu}
         className="flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <span className="w-3.5 shrink-0 text-center font-medium tabular-nums text-muted-foreground">
@@ -61,7 +91,18 @@ function DirtyRow({
             <span className="text-destructive">−{minus}</span>
           </span>
         ) : null}
-      </FileLink>
+      </button>
+      {menu ? (
+        <FileContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={menuItems}
+          onClose={(restoreFocus) => {
+            setMenu(null);
+            if (restoreFocus) rowRef.current?.focus();
+          }}
+        />
+      ) : null}
       {actionsEnabled ? (
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 bg-state-hover px-0.5 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
           <button
@@ -154,6 +195,7 @@ export function ProjectSection({
         key={file.path}
         file={file}
         environmentId={environmentId}
+        rootPath={project.rootPath}
         onOpen={onOpenDirtyFile}
         onAction={(action, target) => void mutate(action, target)}
         pending={pending}

@@ -253,6 +253,7 @@ function projectFrom(
     behind: typeof mergeBase?.behindCount === "number" ? Math.max(0, mergeBase.behindCount) : 0,
     git,
     environmentId: environmentIdFrom(thread),
+    rootPath: typeof env?.path === "string" ? env.path : null,
     gitActions: false,
     insertions: dirty.insertions,
     deletions: dirty.deletions,
